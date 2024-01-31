@@ -1,0 +1,140 @@
+## Rachel Li (SHU-YING, LI) 
+## ALY6015 (2024.1.29)  Module 3 Assignment — Regression Diagnostics with R
+
+#install.packages("ISLR")
+library(ISLR)
+#install.packages("caret")
+library(caret)
+library(ggplot2)
+library(gridExtra)
+library(pROC)
+
+# Load data
+attach(College)
+head(College)
+
+# Display the summary statistics of the dataset
+summary(College)
+lm(Apps~Private+Accept,data=College)
+
+# Scatter plot
+scatter_plot <- ggplot(College, aes(x = Accept, y = Apps, color = Private)) +
+  geom_point() +
+  labs(title = "Scatter Plot of Acceptance vs. Applications",
+       x = "Acceptance",
+       y = "Applications",
+       color = "Private") +
+  theme_minimal()
+
+# Box plots
+boxplot_accept <- ggplot(College, aes(x = Private, y = Accept, fill = Private)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Acceptance by Private/Non-Private",
+       x = "Private",
+       y = "Acceptance",
+       fill = "Private") +
+  theme_minimal()
+
+boxplot_apps <- ggplot(College, aes(x = Private, y = Apps, fill = Private)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Applications by Private/Non-Private",
+       x = "Private",
+       y = "Applications",
+       fill = "Private") +
+  theme_minimal()
+
+
+# Display the plots separately
+print(scatter_plot)
+print(boxplot_accept)
+print(boxplot_apps)
+
+
+# Split data into train and test sets
+set.seed(123)
+
+# Use createDataPartition to split the data
+index <- createDataPartition(College$Apps, p = 0.7, list = FALSE)
+
+# Create the training set
+train_data <- College[index, ]
+
+# Create the testing set
+test_data <- College[-index, ]％％％％
+
+head(train_data, n = 10)
+
+
+# Fit a logistic regression model to the training set
+logistic_model <- glm(Private ~ Accept + Top10perc, data = train_data, family = "binomial")
+
+# Display the summary of the model
+summary(logistic_model)
+
+
+# Predictions on the training set
+train_predictions <- predict(logistic_model, newdata = train_data, type = "response")
+
+# Convert probabilities to class predictions (1 or 0)
+train_predictions_class <- ifelse(train_predictions > 0.5, 1, 0)
+
+# Confusion matrix
+conf_matrix_train <- table(Actual = train_data$Private, Predicted = train_predictions_class)
+
+# Display confusion matrix
+print("Confusion Matrix for Training Set:")
+print(conf_matrix_train)
+
+# Calculate metrics
+accuracy_train <- sum(diag(conf_matrix_train)) / sum(conf_matrix_train)
+precision_train <- conf_matrix_train[2, 2] / sum(conf_matrix_train[, 2])
+recall_train <- conf_matrix_train[2, 2] / sum(conf_matrix_train[2, ])
+specificity_train <- conf_matrix_train[1, 1] / sum(conf_matrix_train[1, ])
+
+# Display metrics
+print("Metrics for Training Set:")
+cat("Accuracy:", accuracy_train, "\n")
+cat("Precision:", precision_train, "\n")
+cat("Recall (Sensitivity):", recall_train, "\n")
+cat("Specificity:", specificity_train, "\n")
+
+
+# Load necessary libraries
+library(pROC)
+library(e1071)
+
+# Predictions on the test set
+test_predictions <- predict(logistic_model, newdata = test_data, type = "response")
+
+# Convert probabilities to class predictions (1 or 0)
+test_predictions_class <- ifelse(test_predictions > 0.5, 1, 0)
+
+# ROC curve for logistic regression model on the test set
+roc_curve <- roc(test_data$Private, test_predictions_class)
+plot(roc_curve, main = "ROC Curve for Logistic Regression", col = "blue", lwd = 2)
+
+# Calculate and interpret AUC
+auc_value <- auc(roc_curve)
+cat("AUC for Logistic Regression:", auc_value, "\n")
+
+# Compare with Support Vector Machine (SVM)
+svm_model <- svm(Private ~ Accept + Top10perc, data = train_data, kernel = "linear", probability = TRUE)
+svm_predictions <- predict(svm_model, newdata = test_data, probability = TRUE)
+
+# Extract predicted probabilities for the positive class
+svm_probabilities <- attr(svm_predictions, "probabilities")[, 2]
+
+# ROC curve for SVM on the test set
+roc_curve_svm <- roc(test_data$Private, svm_probabilities)
+plot(roc_curve_svm, col = "red", lwd = 2, add = TRUE, legend = TRUE)
+
+# Calculate and interpret AUC for SVM
+auc_value_svm <- auc(roc_curve_svm)
+cat("AUC for SVM:", auc_value_svm, "\n")
+
+
+
+
+
+
+
